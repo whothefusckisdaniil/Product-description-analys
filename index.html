@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск товара</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Анализ описания товаров</h1>
+        <p>Загрузите HTML-файл</p>
+        
+        <label for="htmlFileInput" class="button">Выбрать файл</label>
+        <input type="file" id="htmlFileInput" accept=".html, .htm">
+        
+        <div class="button-group">
+            <button id="searchButton" class="button" disabled>Поиск</button>
+            <button id="exportButton" class="button secondary" style="display: none;">Экспорт в CSV</button>
+        </div>
+        
+        <div id="results-container">
+            <h2>Результаты:</h2>
+            <pre id="results-preview">Здесь появятся результаты поиска...</pre>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
