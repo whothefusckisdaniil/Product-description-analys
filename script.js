@@ -8,10 +8,11 @@ const originalLabelText = fileInputLabel.textContent;
 let foundItems = [];
 
 fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) {
+    const fileCount = fileInput.files.length;
+    if (fileCount > 0) {
         searchButton.disabled = false;
         fileInputLabel.classList.add('secondary');
-        fileInputLabel.textContent = fileInput.files[0].name;
+        fileInputLabel.textContent = `Выбрано файлов: ${fileCount}`;
     } else {
         searchButton.disabled = true;
         fileInputLabel.classList.remove('secondary');
@@ -20,33 +21,48 @@ fileInput.addEventListener('change', () => {
 });
 
 searchButton.addEventListener('click', () => {
-    const file = fileInput.files[0];
-    if (!file) {
-        alert('Пожалуйста, сначала выберите файл.');
+    const files = fileInput.files;
+    if (files.length === 0) {
+        alert('Пожалуйста, сначала выберите файлы.');
         return;
     }
 
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const contents = e.target.result;
-        processFileContents(contents);
-    };
-    reader.readAsText(file);
+    const fileReadPromises = Array.from(files).map(file => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = e => reject(e);
+            reader.readAsText(file);
+        });
+    });
+
+    Promise.all(fileReadPromises)
+        .then(allContents => {
+            foundItems = [];
+            allContents.forEach(content => {
+                const itemsFromFile = processFileContents(content);
+                foundItems.push(...itemsFromFile);
+            });
+            displayResults();
+        })
+        .catch(error => {
+            console.error("Ошибка при чтении файлов:", error);
+            resultsPreview.textContent = "Произошла ошибка при чтении одного из файлов.";
+        });
 });
+
 
 exportButton.addEventListener('click', () => {
     if (foundItems.length === 0) {
         alert('Нет данных для экспорта.');
         return;
     }
-
     let csvContent = '';
     foundItems.forEach(item => {
         const line1 = `"${item.trackingNumber}"`;
         const line2 = `"Goods decription: ${item.fullDescription}"`;
         csvContent += `${line1}\n${line2}\n\n`;
     });
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
@@ -56,35 +72,34 @@ exportButton.addEventListener('click', () => {
     document.body.removeChild(link);
 });
 
-
 function processFileContents(htmlContent) {
-    const keywords = ['stic', 'stik', 'cig', 'tobacco', 'heat', 'heet', 'iqos', 'ikos', 'icos', 'hit', 'iluma', 'terea'];
-    
+    const keywords = ['stic', 'stik', 'cig', 'tobacco', 'heat', 'heet', 'iqos', 'ikos', 'icos', 'hit', 'iluma', 'terea', 'stick', 'tobaco', 'tobaco', 'terra', 'nicotine', 'accessories'];
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
     const text = tempDiv.textContent || tempDiv.innerText || "";
-
     const blockRegex = /(\d{3}-\d{8})[\s\S]*?Goods decription:\s*(.*?)(?:\n|$)/g;
     let match;
-    
-    foundItems = []; 
+    const items = [];
 
     while ((match = blockRegex.exec(text)) !== null) {
         const trackingNumber = match[1];
         const fullDescription = (match[2] || "").trim();
-        const descriptionForSearch = fullDescription.toLowerCase(); 
+        const descriptionForSearch = fullDescription.toLowerCase();
 
         for (const keyword of keywords) {
             if (descriptionForSearch.includes(keyword)) {
-                foundItems.push({
+                items.push({
                     trackingNumber: trackingNumber,
-                    fullDescription: fullDescription 
+                    fullDescription: fullDescription
                 });
-                break; 
+                break;
             }
         }
     }
-    
+    return items;
+}
+
+function displayResults() {
     if (foundItems.length > 0) {
         let previewText = '';
         foundItems.forEach(item => {
